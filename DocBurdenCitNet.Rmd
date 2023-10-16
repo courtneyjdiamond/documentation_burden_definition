@@ -1,0 +1,14 @@
+---
+title: "Documentation Burden Citation Networks"
+output: html_document
+date: "2023-10-16"
+---
+
+### Install packages needed. 
+
+```{r}
+library(tidyverse)
+library(bibliometrix)
+library(bibliometrixData)
+```
+
