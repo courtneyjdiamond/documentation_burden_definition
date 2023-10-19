@@ -10,5 +10,130 @@ date: "2023-10-16"
 library(tidyverse)
 library(bibliometrix)
 library(bibliometrixData)
+
+```
+
+```{r}
+doc_burden_top_20 = read_csv("data/ResearchRabbit_Export_1697503513.csv") |> 
+  mutate(top_20 = "top 20") |> 
+  mutate(Title = str_to_lower(Title)) |> 
+  mutate(Title = str_replace_all(Title, "[[:punct:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "preprint$", "")) |> 
+  mutate(Title = str_replace_all(Title, "[^[:ascii:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "o50 ", "")) |> 
+  mutate(Title = str_trim(Title, side = "both"))
+```
+
+
+```{r}
+doc_burden_rr_earlier_work = read_csv("data/ResearchRabbit_Export_1697503523.csv") |> 
+  mutate(earlier_work = "earlier work") |> 
+  mutate(Title = str_to_lower(Title)) |> 
+  mutate(Title = str_replace_all(Title, "[[:punct:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "preprint$", "")) |> 
+  mutate(Title = str_replace_all(Title, "[^[:ascii:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "o50 ", "")) |> 
+  mutate(Title = str_trim(Title, side = "both"))
+```
+
+
+```{r}
+doc_burden_rr_later_work = read_csv("data/ResearchRabbit_Export_1697503528.csv") |> 
+  mutate(later_work = "later work") |> 
+  mutate(Title = str_to_lower(Title)) |> 
+  mutate(Title = str_replace_all(Title, "[[:punct:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "preprint$", "")) |> 
+  mutate(Title = str_replace_all(Title, "[^[:ascii:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "25[\\s][\\s]", "25 ")) |> 
+  mutate(Title = str_replace_all(Title, "o50 ", "")) |> 
+  mutate(Title = str_trim(Title, side = "both"))
+```
+
+
+```{r}
+core = read_delim("data/doc_burden_cit_network_core.txt", delim = "\n", col_names = FALSE) |> 
+  separate_wider_delim(cols= X1, delim = ": ", names = c("Section", "Data"), too_many = "merge") |> 
+  filter(!Section %in% c("Reference Type", "Journal", "Volume", "Issue", "Pages", "URL", "Short Title", "Notes", "Accession Number", "Abstract"))
+```
+
+
+```{r}
+core = core |> 
+  mutate(row = row_number()) |> 
+  mutate(record = ifelse(Section == "Record Number", row, "y")) |> 
+  mutate(record = na_if(record, "y")) |> 
+  fill(record, .direction = "down") |> 
+  select(Section, Data, record) |> 
+  pivot_wider(names_from = Section, values_from = Data) |> 
+  mutate(Year = as.double(Year)) |> 
+  mutate(core = 'core') |> 
+  mutate(Title = str_to_lower(Title)) |> 
+  mutate(Title = str_replace_all(Title, "[[:punct:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "preprint$", "")) |> 
+  mutate(Title = str_replace_all(Title, "[^[:ascii:]]", "")) |> 
+  mutate(Title = str_replace_all(Title, "o50 ", "")) |> 
+  mutate(Title = str_replace_all(Title, "australian college of midwives national conference  together at the top september 1315 2022 cairns queensland australia", "")) |> 
+  mutate(Title = str_replace_all(Title, "mp3404", "")) |> 
+  mutate(Title = str_trim(Title, side = "both"))
+```
+
+
+```{r}
+doc_burden_wos_core_collection = read_csv("data/wos_core_collection.csv") |> 
+  janitor::clean_names() |> 
+  select(article_title) |> 
+  mutate(article_title = str_to_lower(article_title)) |> 
+  mutate(article_title = str_replace_all(article_title, "[[:punct:]]", "")) |> 
+  mutate(article_title = str_replace_all(article_title, "preprint$", "")) |> 
+  mutate(article_title = str_replace_all(article_title, "[^[:ascii:]]", "")) |> 
+  mutate(article_title = str_trim(article_title, side = "both")) |> 
+  mutate(article_title = str_replace_all(article_title, "^25 x 5", "25 5")) |> 
+  mutate(wos_core = 'wos_core')
+```
+
+
+
+```{r}
+joined_doc_burden = full_join(core, doc_burden_top_20, by = c("Title" = "Title")) |> 
+  full_join(doc_burden_rr_earlier_work, by = "Title") |> 
+  full_join(doc_burden_rr_later_work, by = "Title") |> 
+  relocate("record", "Record Number", "Title", "Author", "top_20", "earlier_work", "later_work") |>
+  rename(arXivID = 'arXiv ID', arXivIDx = 'arXiv ID.x', arXivIDy = 'arXiv ID.y') |> 
+  select(!c(Journal, Abstract, Journal.x, Abstract.x, Abstract.y, Journal.y, arXivID, arXivIDx, arXivIDy)) |> 
+  mutate(doi = coalesce(DOI.x, DOI.y)) |> 
+  mutate(doi = coalesce(doi, DOI.x.x)) |> 
+  mutate(doi = coalesce(doi, DOI.y.y)) |> 
+  select(!c(DOI.x, DOI.y, DOI.x.x, DOI.y.y)) |> 
+  mutate(year = coalesce(Year.x, Year.y)) |> 
+  mutate(year = coalesce(year, Year.x.x)) |> 
+  mutate(year = coalesce(year, Year.y.y)) |> 
+  select(!c(Year.x, Year.y, Year.x.x, Year.y.y)) |> 
+  mutate(author = coalesce(Author, Authors)) |> 
+  mutate(author = coalesce(author, Authors.x)) |> 
+  mutate(author = coalesce(author, Authors.y)) |> 
+  select(!c(Author, Authors, Authors.x, Authors.y)) |> 
+  mutate(pmid = coalesce(PMID, PMID.x)) |> 
+  mutate(pmid = coalesce(pmid, PMID.y)) |> 
+  select(!c(PMID, PMID.x, PMID.y)) |> 
+  full_join(doc_burden_wos_core_collection, by = c("Title" = "article_title")) |> 
+  write_csv("full_join_doc_burden.csv")
+```
+
+
+```{r}
+
+#M <- convert2df("data/wos_doc_burden.txt", dbsource = "wos", format = "plaintext")
+#View(M)
+
+#graph = biblioNetwork(M, analysis = "coupling", network = "references")
+#graph
+
+#graph_plot = networkPlot(graph, n = 99, label.cex = TRUE, type = "kamada", size.cex = TRUE)
+
+#net2VOSviewer(graph_plot, vos.path = "Applications/VOSviewer")
+
+#graph_stats = networkStat(graph, stat = "network")
+#print(graph_stats[1])
+
 ```
 

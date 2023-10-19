@@ -388,6 +388,139 @@ display: none;
 ## To start with the Biblioshiny app, please digit:
 ## biblioshiny()</code></pre>
 <pre class="r"><code>library(bibliometrixData)</code></pre>
+<pre class="r"><code>doc_burden_top_20 = read_csv(&quot;data/ResearchRabbit_Export_1697503513.csv&quot;) |&gt; 
+  mutate(top_20 = &quot;top 20&quot;) |&gt; 
+  mutate(Title = str_to_lower(Title)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[[:punct:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;preprint$&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[^[:ascii:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;o50 &quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_trim(Title, side = &quot;both&quot;))</code></pre>
+<pre><code>## Rows: 20 Columns: 8
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (5): DOI, Title, Abstract, Authors, Journal
+## dbl (2): PMID, Year
+## lgl (1): arXiv ID
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>doc_burden_rr_earlier_work = read_csv(&quot;data/ResearchRabbit_Export_1697503523.csv&quot;) |&gt; 
+  mutate(earlier_work = &quot;earlier work&quot;) |&gt; 
+  mutate(Title = str_to_lower(Title)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[[:punct:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;preprint$&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[^[:ascii:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;o50 &quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_trim(Title, side = &quot;both&quot;))</code></pre>
+<pre><code>## Rows: 49 Columns: 8
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (5): DOI, Title, Abstract, Authors, Journal
+## dbl (2): PMID, Year
+## lgl (1): arXiv ID
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>doc_burden_rr_later_work = read_csv(&quot;data/ResearchRabbit_Export_1697503528.csv&quot;) |&gt; 
+  mutate(later_work = &quot;later work&quot;) |&gt; 
+  mutate(Title = str_to_lower(Title)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[[:punct:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;preprint$&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[^[:ascii:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;25[\\s][\\s]&quot;, &quot;25 &quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;o50 &quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_trim(Title, side = &quot;both&quot;))</code></pre>
+<pre><code>## Rows: 50 Columns: 8
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (5): DOI, Title, Abstract, Authors, Journal
+## dbl (2): PMID, Year
+## lgl (1): arXiv ID
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>core = read_delim(&quot;data/doc_burden_cit_network_core.txt&quot;, delim = &quot;\n&quot;, col_names = FALSE) |&gt; 
+  separate_wider_delim(cols= X1, delim = &quot;: &quot;, names = c(&quot;Section&quot;, &quot;Data&quot;), too_many = &quot;merge&quot;) |&gt; 
+  filter(!Section %in% c(&quot;Reference Type&quot;, &quot;Journal&quot;, &quot;Volume&quot;, &quot;Issue&quot;, &quot;Pages&quot;, &quot;URL&quot;, &quot;Short Title&quot;, &quot;Notes&quot;, &quot;Accession Number&quot;, &quot;Abstract&quot;))</code></pre>
+<pre><code>## Rows: 1845 Columns: 1
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;\001&quot;
+## chr (1): X1
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>core = core |&gt; 
+  mutate(row = row_number()) |&gt; 
+  mutate(record = ifelse(Section == &quot;Record Number&quot;, row, &quot;y&quot;)) |&gt; 
+  mutate(record = na_if(record, &quot;y&quot;)) |&gt; 
+  fill(record, .direction = &quot;down&quot;) |&gt; 
+  select(Section, Data, record) |&gt; 
+  pivot_wider(names_from = Section, values_from = Data) |&gt; 
+  mutate(Year = as.double(Year)) |&gt; 
+  mutate(core = &#39;core&#39;) |&gt; 
+  mutate(Title = str_to_lower(Title)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[[:punct:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;preprint$&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;[^[:ascii:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;o50 &quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;australian college of midwives national conference  together at the top september 1315 2022 cairns queensland australia&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_replace_all(Title, &quot;mp3404&quot;, &quot;&quot;)) |&gt; 
+  mutate(Title = str_trim(Title, side = &quot;both&quot;))</code></pre>
+<pre class="r"><code>doc_burden_wos_core_collection = read_csv(&quot;data/wos_core_collection.csv&quot;) |&gt; 
+  janitor::clean_names() |&gt; 
+  select(article_title) |&gt; 
+  mutate(article_title = str_to_lower(article_title)) |&gt; 
+  mutate(article_title = str_replace_all(article_title, &quot;[[:punct:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(article_title = str_replace_all(article_title, &quot;preprint$&quot;, &quot;&quot;)) |&gt; 
+  mutate(article_title = str_replace_all(article_title, &quot;[^[:ascii:]]&quot;, &quot;&quot;)) |&gt; 
+  mutate(article_title = str_trim(article_title, side = &quot;both&quot;)) |&gt; 
+  mutate(article_title = str_replace_all(article_title, &quot;^25 x 5&quot;, &quot;25 5&quot;)) |&gt; 
+  mutate(wos_core = &#39;wos_core&#39;)</code></pre>
+<pre><code>## Rows: 98 Columns: 72
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (32): Publication Type, Authors, Book Editors, Book Group Authors, Autho...
+## dbl  (4): Publication Year, Volume, Supplement, Pubmed Id
+## lgl (36): Book Authors, Book Author Full Names, Book Series Subtitle, Langua...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<pre class="r"><code>joined_doc_burden = full_join(core, doc_burden_top_20, by = c(&quot;Title&quot; = &quot;Title&quot;)) |&gt; 
+  full_join(doc_burden_rr_earlier_work, by = &quot;Title&quot;) |&gt; 
+  full_join(doc_burden_rr_later_work, by = &quot;Title&quot;) |&gt; 
+  relocate(&quot;record&quot;, &quot;Record Number&quot;, &quot;Title&quot;, &quot;Author&quot;, &quot;top_20&quot;, &quot;earlier_work&quot;, &quot;later_work&quot;) |&gt;
+  rename(arXivID = &#39;arXiv ID&#39;, arXivIDx = &#39;arXiv ID.x&#39;, arXivIDy = &#39;arXiv ID.y&#39;) |&gt; 
+  select(!c(Journal, Abstract, Journal.x, Abstract.x, Abstract.y, Journal.y, arXivID, arXivIDx, arXivIDy)) |&gt; 
+  mutate(doi = coalesce(DOI.x, DOI.y)) |&gt; 
+  mutate(doi = coalesce(doi, DOI.x.x)) |&gt; 
+  mutate(doi = coalesce(doi, DOI.y.y)) |&gt; 
+  select(!c(DOI.x, DOI.y, DOI.x.x, DOI.y.y)) |&gt; 
+  mutate(year = coalesce(Year.x, Year.y)) |&gt; 
+  mutate(year = coalesce(year, Year.x.x)) |&gt; 
+  mutate(year = coalesce(year, Year.y.y)) |&gt; 
+  select(!c(Year.x, Year.y, Year.x.x, Year.y.y)) |&gt; 
+  mutate(author = coalesce(Author, Authors)) |&gt; 
+  mutate(author = coalesce(author, Authors.x)) |&gt; 
+  mutate(author = coalesce(author, Authors.y)) |&gt; 
+  select(!c(Author, Authors, Authors.x, Authors.y)) |&gt; 
+  mutate(pmid = coalesce(PMID, PMID.x)) |&gt; 
+  mutate(pmid = coalesce(pmid, PMID.y)) |&gt; 
+  select(!c(PMID, PMID.x, PMID.y)) |&gt; 
+  full_join(doc_burden_wos_core_collection, by = c(&quot;Title&quot; = &quot;article_title&quot;)) |&gt; 
+  write_csv(&quot;full_join_doc_burden.csv&quot;)</code></pre>
+<pre class="r"><code>#M &lt;- convert2df(&quot;data/wos_doc_burden.txt&quot;, dbsource = &quot;wos&quot;, format = &quot;plaintext&quot;)
+#View(M)
+
+#graph = biblioNetwork(M, analysis = &quot;coupling&quot;, network = &quot;references&quot;)
+#graph
+
+#graph_plot = networkPlot(graph, n = 99, label.cex = TRUE, type = &quot;kamada&quot;, size.cex = TRUE)
+
+#net2VOSviewer(graph_plot, vos.path = &quot;Applications/VOSviewer&quot;)
+
+#graph_stats = networkStat(graph, stat = &quot;network&quot;)
+#print(graph_stats[1])</code></pre>
 </div>
 
 
